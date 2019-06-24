@@ -1,0 +1,15 @@
+#!/usr/bin/bash
+
+# Install VSCODE
+# sudo snap install --classic code
+
+# Install VSCode Workspace Extension
+code --install-extension particle.particle-vscode-pack
+
+## TODO: On failure raise error saying to install vscode
+
+# Install the CLI
+bash <( curl -sL https://particle.io/install-cli )
+
+# Login
+particle login

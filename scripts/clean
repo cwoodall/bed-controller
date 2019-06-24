@@ -1,0 +1,8 @@
+#!/usr/bin/bash
+
+GIT_ROOT=$(git rev-parse --show-toplevel)
+cd $GIT_ROOT
+
+rm *.bin
+rm -r build
+rm src/bed-controller.cpp
