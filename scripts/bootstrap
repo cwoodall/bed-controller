@@ -8,8 +8,12 @@ code --install-extension particle.particle-vscode-pack
 
 ## TODO: On failure raise error saying to install vscode
 
+
 # Install the CLI
 bash <( curl -sL https://particle.io/install-cli )
 
+# https://docs.particle.io/support/particle-tools-faq/local-build/
+# need crc32, vim-common (for xxd)
 # Login
 particle login
+

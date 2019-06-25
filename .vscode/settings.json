@@ -3,5 +3,9 @@
     "C_Cpp.default.configurationProvider": "particle.particle-vscode-core",
     "files.associations": {
         "*.ino": "cpp"
-    }
+    },
+    "particle.targetPlatform": "argon",
+    "cortex-debug.openocdPath": "/home/cw/.particle/toolchains/openocd/0.10.0-particle.1/bin/openocd",
+    "particle.firmwareVersion": "1.1.0",
+    "particle.targetDevice": "e00fce68ce39beafed55cda7"
 }
