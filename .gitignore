@@ -67,5 +67,3 @@ cmake_install.cmake
 
 
 *.bin
-# Generated file
-src/bed-controller.cpp
