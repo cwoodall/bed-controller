@@ -6,6 +6,9 @@
 
 #ifdef __cplusplus
 
+#define ARDUINO
+#define ARDUINOJSON_EMBEDDED_MODE 1
+
 #ifndef ARDUINOJSON_DEBUG
 #ifdef __clang__
 #pragma clang system_header
@@ -4107,7 +4110,7 @@ struct ArduinoStreamReader {
  public:
   explicit ArduinoStreamReader(Stream& stream) : _stream(stream) {}
   int read() {
-    uint8_t c;
+    char c;
     return _stream.readBytes(&c, 1) ? c : -1;
   }
 };
