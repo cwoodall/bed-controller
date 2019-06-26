@@ -5,10 +5,47 @@
  * Date:
  */
 
-constexpr size_t switch_pin_matrix_size[2] = {4, 3};
-constexpr pin_t switch_pin_matrix[2][4] = {
+#include <array>
+
+struct SwitchMatrix {
+  struct Location {
+    size_t row;
+    size_t column;
+  };
+  
+  std::array<pin_t, 4> rows;
+  std::array<pin_t, 3> columns;
+
+  void for_each (void (*fn)(pin_t)) {
+    for (pin_t pin : columns) {
+      fn(pin);
+    }
+
+    for (pin_t pin : rows) {
+      fn(pin);
+    }
+  }
+
+  void setup() {
+    for_each([](pin_t pin) { pinMode(pin, OUTPUT); });
+    
+    clear();
+  }
+
+  void clear() {
+    for_each([](pin_t pin) { digitalWrite(pin, LOW); });
+  }
+
+  void set(Location loc, PinState state) {
+    clear();
+    digitalWrite(rows[loc.row], state);
+    digitalWrite(columns[loc.column], state);
+  }
+};
+
+static SwitchMatrix switch_pin_matrix = {
   {2, 3, 4, 5}, // Row Select Pin
-  {A0, A1, A2, 0}  // Column Select Pin
+  {A0, A1, A2}  // Column Select Pin
 };
 
 
@@ -22,10 +59,6 @@ enum SwitchId  {
   Max
 };
 
-struct Switches {
-  size_t row;
-  size_t column;
-};
 /**
  * | 0  | 1  |
  * | 2  | 3  |
@@ -34,7 +67,7 @@ struct Switches {
  * | 8  | 9 |
  *   | 10 |
  */
-constexpr size_t switch_locations[(size_t)SwitchId::Max][2] = {
+constexpr SwitchMatrix::Location switch_locations[(size_t)SwitchId::Max]= {
   {0, 0}, // 0
   {1, 1}, // 1
   {2, 0}, // 2
@@ -48,37 +81,17 @@ constexpr size_t switch_locations[(size_t)SwitchId::Max][2] = {
   {3, 2}, // 10.  Flashlight
 };
 
-static Switches lookupSwitchLocation(SwitchId id) {
-  size_t const *loc = switch_locations[(size_t)id];
-  return {loc[0], loc[1]};
-}
-
-static void clearSwitches() {
-  for (size_t i = 0; i < 2; i++) {
-    for (size_t j = 0; j < switch_pin_matrix_size[i]; j++) {
-      digitalWrite(switch_pin_matrix[i][j], LOW);
-    }
-  }
-}
-
-static void setupSwitches() {
-  for (size_t i = 0; i < 2; i++) {
-    for (size_t j = 0; j < switch_pin_matrix_size[i]; j++) {
-      pinMode(switch_pin_matrix[i][j], OUTPUT);
-    }
-  }
-  clearSwitches();
+static SwitchMatrix::Location const &lookupSwitchLocation(SwitchId id) {
+  return switch_locations[(size_t)id];
 }
 
 bool flashlight_state = LOW;
 constexpr uint32_t kToggleTimeout_ms = 250;
 
 static void pressSwitch(SwitchId id, PinState state) {
-  static Timer timer(kToggleTimeout_ms, clearSwitches, true);
-  Switches switches = lookupSwitchLocation(id);
-  clearSwitches();
-  digitalWrite(switch_pin_matrix[0][switches.row], state);
-  digitalWrite(switch_pin_matrix[1][switches.column], state);
+  static Timer timer(kToggleTimeout_ms, &SwitchMatrix::clear, switch_pin_matrix, true);
+  SwitchMatrix::Location loc = lookupSwitchLocation(id);
+  switch_pin_matrix.set(loc, state);
   timer.start();
 }
 
@@ -95,7 +108,7 @@ int particleToggleSwitch(String switch_str) {
 // setup() runs once, when the device is first turned on.
 void setup() {
   // Put initialization like pinMode and begin functions here.
-  setupSwitches();
+  switch_pin_matrix.setup();
 
   Particle.function("toggleSwitch", particleToggleSwitch);
 }
