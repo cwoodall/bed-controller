@@ -85,8 +85,7 @@ int cloudPress(String json) {
   SwitchMatrix::Location loc;
   if (lookupSwitchLocation(doc["switch"], &loc)) {
     uint32_t delay_ms = doc["delay"] | 250;
-    switch_pin_matrix.press(loc, delay_ms);
-    return 1;
+    return switch_pin_matrix.press(loc, delay_ms) ? 1 : -1;
   } else {
     return -1;
   }
