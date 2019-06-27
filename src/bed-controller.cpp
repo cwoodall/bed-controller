@@ -4,10 +4,15 @@
  * Author:
  * Date:
  */
+// Particle Libraries
 #include "Particle.h"
 
-#include "switch_matrix.h"
+// Private Libraries
 #include "ArduinoJson.h"
+
+// additional libraries
+#include "switch_matrix.h"
+#include "version.h"
 
 // Use primary serial over USB interface for logging output
 // You can watch logging of the Particle device via CLI:
@@ -26,7 +31,7 @@ enum SwitchId  {
   Max
 };
 
-static SwitchMatrix switch_pin_matrix = {
+static SwitchMatrix switches = {
   {2, 3, 4, 5}, // Row Select Pin
   {A0, A1, A2}  // Column Select Pin
 };
@@ -62,9 +67,11 @@ static bool lookupSwitchLocation(int id, SwitchMatrix::Location *dst) {
   }
 }
 
+constexpr uint32_t kPressWatchdogTime_ms = 2000;
+Timer press_watchdog(kPressWatchdogTime_ms, &SwitchMatrix::clear, switches, true);
+bool timer_disabled = false;
 
-
-int cloudPress(String json) {
+int cloudPressFor(String json) {
   // Allocate the JSON document
   //
   // Inside the brackets, 200 is the capacity of the memory pool in bytes.
@@ -75,32 +82,97 @@ int cloudPress(String json) {
   // Deserialize the JSON document
   DeserializationError error = deserializeJson(doc, json);
 
-    // Test if parsing succeeds.
+  // Test if parsing succeeds.
   if (error) {
-    // Serial.print(F("deserializeJson() failed: "));
-    // Serial.println(error.c_str());
     return -1;
   }
 
   SwitchMatrix::Location loc;
   if (lookupSwitchLocation(doc["switch"], &loc)) {
     uint32_t delay_ms = doc["delay"] | 250;
-    return switch_pin_matrix.press(loc, delay_ms) ? 1 : -1;
+    return switches.press(loc, delay_ms) ? 1 : -1;
   } else {
     return -1;
   }
 }
 
+int cloudPress(String json) {
+  StaticJsonDocument<200> doc;
+
+  // Deserialize the JSON document
+  DeserializationError error = deserializeJson(doc, json);
+
+  // Test if parsing succeeds.
+  if (error) {
+    return -1;
+  }
+
+  if (!(doc["force"] | false) && switches.isPressing()) {
+    if (!timer_disabled) {
+      press_watchdog.reset();    
+    }
+    return 2;
+  }
+
+ 
+  JsonVariant id = doc["switch"];
+  
+  if (id.isNull()) {
+    return -1;
+  }
+
+  SwitchMatrix::Location loc;
+  if (lookupSwitchLocation(id, &loc)) {
+    if (!timer_disabled) {
+      press_watchdog.reset();
+    }
+    switches.set(loc, HIGH);
+    return 1;
+  } else {
+    return -1;
+  }
+}
+
+int cloudSetPressTimeout(String json) {
+    StaticJsonDocument<200> doc;
+
+  // Deserialize the JSON document
+  DeserializationError error = deserializeJson(doc, json);
+
+  // Test if parsing succeeds.
+  if (error) {
+    return -1;
+  }
+
+  uint32_t timeout = doc["timeout"] | kPressWatchdogTime_ms;
+  timer_disabled = timeout == 0;
+  press_watchdog.changePeriod(timeout);
+
+  return 1;
+}
+
+int cloudRelease(String _) {
+  press_watchdog.stop();
+  switches.clear();
+  return 1;
+}
+
+bool is_pressing;
 // setup() runs once, when the device is first turned on.
 void setup() {
   // Put initialization like pinMode and begin functions here.
-  switch_pin_matrix.setup();
+  switches.setup();
 
+  Particle.function("pressFor", cloudPressFor);
   Particle.function("press", cloudPress);
+  Particle.function("release", cloudRelease);
+  Particle.function("pressTimeout", cloudSetPressTimeout);
+  Particle.variable("isPressing", is_pressing);
+  Particle.variable("version", kVersion);
 }
 
 
 // loop() runs over and over again, as quickly as it can execute.
 void loop() {
-
+  is_pressing = switches.isPressing();
 }
