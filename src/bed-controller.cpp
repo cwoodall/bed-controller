@@ -89,8 +89,9 @@ int cloudPressFor(String json) {
 
   SwitchMatrix::Location loc;
   if (lookupSwitchLocation(doc["switch"], &loc)) {
-    uint32_t delay_ms = doc["delay"] | 250;
-    return switches.press(loc, delay_ms) ? 1 : -1;
+    uint32_t duration_ms = doc["duration"] | 250;
+    switches.clear();
+    return switches.press(loc, duration_ms) ? 1 : -1;
   } else {
     return -1;
   }
